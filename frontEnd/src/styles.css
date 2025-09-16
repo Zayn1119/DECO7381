@@ -1,0 +1,439 @@
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #fff;
+  color: #111827;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card {
+  width: 380px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+}
+
+h1 { margin: 0 0 12px 0; }
+h2 { margin: 16px 0 8px; font-size: 18px; }
+
+label { display:block; margin: 8px 0 4px; font-size: 14px; }
+input {
+  width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px;
+  font-size:14px; outline:none;
+}
+
+.btn, .btn-outline {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 10px;
+}
+.btn { background:#111827; color:#fff; border:1px solid #111827; }
+.btn:hover { filter: brightness(1.05); }
+.btn-outline { background:#fff; color:#111827; border:1px solid #e5e7eb; }
+
+.row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+
+.msg { margin-top: 12px; color: #b91c1c; font-size: 14px; }
+.hint { color:#6b7280; font-size:12px; margin-top:6px; }
+.grid { display:grid; gap:10px; }
+
+.meeting-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+.meeting-meta { font-size: 12px; color: #6b7280; }
+
+/* ===== Conference (独立样式，不依赖 Trade) ===== */
+.conf-app { display:flex; flex-direction:column; min-height:100vh; background:#fff; }
+
+.conf-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:20px 24px 10px; border-bottom:1px solid #e5e7eb;
+}
+.conf-title h1 { margin:0; font-size:32px; line-height:1.1; font-weight:800; color:#0f172a; }
+.conf-muted { color:#64748b; margin-top:6px; }
+.conf-actions .conf-btn { margin-left:8px; }
+
+.conf-body { display:grid; grid-template-columns:300px 1fr; gap:16px; padding:16px 20px; }
+
+/* 左侧 */
+.conf-sidebar { background:#f8fafc; border-right:1px solid #e5e7eb; padding:12px; border-radius:12px; height:calc(100vh - 110px); overflow:auto; }
+.conf-panel {
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04); margin-bottom:12px;
+}
+.conf-panel h3 { margin:0 0 10px; font-size:18px; font-weight:700; color:#0f172a; }
+.conf-row { display:flex; gap:8px; align-items:center; }
+
+/* 按钮 */
+.conf-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid #d1d5db; background:#fff; padding:8px 12px; border-radius:10px;
+  font-weight:600; cursor:pointer; transition:all .15s;
+}
+.conf-btn:hover { background:#f3f4f6; }
+.conf-btn.primary { background:#111827; color:#fff; border-color:#111827; }
+.conf-btn.primary:hover { filter:brightness(0.95); }
+
+/* 右侧画布 */
+.conf-canvas { display:flex; flex-direction:column; min-width:0; }
+.conf-scroll {
+  overflow:auto; height: calc(100vh - 190px);
+  border:1px solid #e5e7eb; border-radius:12px; background:#fff; padding:10px;
+}
+#conf-board {
+  position:relative; width:1600px; height:900px; background:#fff; border-radius:8px;
+  background-image:
+    linear-gradient(#edf2f7 1px, transparent 1px),
+    linear-gradient(90deg, #edf2f7 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px;
+}
+
+/* 桌子与座位 */
+.conf-table {
+  position:absolute; user-select:none; cursor:move;
+  display:grid; place-items:center; text-align:center;
+  background:#eaffea; border:3px solid #22c55e; color:#0f172a;
+}
+.conf-table.circle { border-radius:50%; width:120px; height:120px; }
+.conf-table.square { width:120px; height:120px; background:#fffdf5; border-color:#f59e0b; }
+.conf-table.row { width:220px; height:80px; background:#fffdf5; border-color:#f59e0b; padding:0 10px; }
+.conf-table-title small { display:block; font-size:12px; color:#334155; }
+.conf-seat-count { margin-top:2px; font-weight:800; }
+
+.conf-chair {
+  position:absolute; width:24px; height:24px; border-radius:50%;
+  border:1px solid #64748b; background:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:10px; color:#111827;
+}
+.conf-chair.assigned { background:#bfdbfe; }
+
+/* Guests 徽章 */
+.conf-badge {
+  display:inline-block; margin:4px; padding:6px 10px; border:1px solid #d1d5db; border-radius:999px;
+  background:#f8fafc; font-weight:600; cursor:grab;
+}
+.conf-badge.assigned { opacity:.55; }
+.conf-badge-info { display:block; font-size:10px; color:#64748b; }
+
+/* Filters & hint */
+.conf-filters { margin-top:12px; padding-top:12px; border-top:1px solid #e5e7eb; }
+.conf-filter-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.conf-filter-label { width:90px; font-size:12px; color:#64748b; }
+
+.conf-hint {
+  margin-top:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px;
+  min-height:36px; display:flex; align-items:center; padding:8px 12px; color:#334155;
+}
+
+.conf-small { font-size:12px; color:#64748b; }
+
+
+/* --- Fix: make form controls fit the panel width --- */
+.conf-panel input,
+.conf-panel select { width:100%; box-sizing:border-box; }
+
+.conf-btn.block { width:100%; justify-content:center; }
+
+/* --- Notes/Tags UI --- */
+.conf-notes { margin:8px 0 6px; }
+.conf-pending-notes { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+
+.conf-chip {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:2px 8px; border:1px solid #e5e7eb; border-radius:999px;
+  background:#f1f5f9; font-size:12px; color:#334155;
+}
+.conf-chip .x { cursor:pointer; font-weight:700; }
+
+.conf-badge-notes { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+
+
+/* --- Trade: booth/area & guests (无椅子版本) --- */
+.trade-table {
+  position:absolute; user-select:none; cursor:move;
+  display:grid; place-items:center; text-align:center;
+  background:#e8f5e9; border:2px solid #4caf50; color:#0f172a;
+}
+.trade-table.circle { border-radius:50%; width:120px; height:120px; }
+.trade-table.square  { width:140px; height:110px; background:#fffdf5; border-color:#f59e0b; }
+.trade-table.row     { width:240px; height:80px;  background:#fffdf5; border-color:#f59e0b; padding:0 10px; }
+.trade-table small   { display:block; font-size:12px; color:#334155; }
+.seat-count          { margin-top:2px; font-weight:800; }
+
+.trade-badge {
+  display:inline-block; margin:4px; padding:6px 10px; border:1px solid #d1d5db; border-radius:999px;
+  background:#f8fafc; font-weight:600; cursor:grab;
+}
+.trade-badge.assigned { opacity:.55; }
+.guest-info { display:block; font-size:10px; color:#64748b; }
+
+/* Trade Show 的画布容器 */
+#trade-board {
+  position: relative;                     /* 关键：让绝对定位的 booth 以它为参照 */
+  width: 1600px;
+  height: 900px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background-image:
+    linear-gradient(#f3f4f6 1px, transparent 1px),
+    linear-gradient(90deg, #f3f4f6 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px;
+}
+
+
+/* ===== Home 布局与防遮挡 ===== */
+html, body, #root { height: 100%; margin: 0; }
+
+.home-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: 1;           /* 确保在任何背景层之上 */
+  padding: 24px;
+}
+.home-card {
+  width: min(760px, 92vw);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+  padding: 40px;
+  position: relative;
+  z-index: 2;
+}
+.home-title { margin: 0 0 12px; font-size: 48px; line-height: 1.1; }
+.home-sub   { margin: 0 0 20px; font-size: 22px; color: #374151; }
+
+/* 兜底：若页面上有全屏层不该接收点击 */
+.fullscreen-bg,
+.canvas-overlay {
+  pointer-events: none;
+}
+
+
+/* HostMenu / Home 容器与防遮挡 */
+.home-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: 1;
+  padding: 24px;
+}
+.home-card {
+  width: min(760px, 92vw);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+  padding: 40px;
+  position: relative;
+  z-index: 2; /* 避免被画布/背景覆盖 */
+}
+
+/* 如果页面里有全屏层，避免它挡住点击 */
+.fullscreen-bg, .canvas-overlay { pointer-events: none; }
+
+
+/* Join/Host 面板统一宽度和输入控件修复 */
+.join-card {
+  width: 560px;
+  max-width: 92vw;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.join-card input,
+.join-card .btn,
+.join-card .btn-outline {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+
+/* HostConference 专用样式 */
+.meeting-card {
+  max-width: 900px;
+  margin: 16px auto;
+  padding: 24px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.meeting-card .home-title {
+  margin-bottom: 12px;
+}
+
+.meeting-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  margin-bottom: 16px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.meeting-btn {
+  margin-bottom: 12px;
+}
+/* 让 HostConference 页面内容居中 */
+.conf-body {
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  align-items: flex-start; /* 上下方向靠上，你也可以改成 center 完全垂直居中 */
+  min-height: 60vh;       /* 占满视口高度 */
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+
+/* 公共输入框样式 */
+.conf-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+/* 卡片居中 */
+.single-card {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 40px;
+}
+
+.join-card {
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* 页面主体居中（Conference/Trade Host 通用） */
+.conf-body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;   /* 如果要上下也居中，改成 center */
+  min-height: 60vh;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* 卡片容器（Conference/Trade Host/Join 页面通用） */
+.conf-panel.join-card {
+  max-width: 900px;          /* 和 Conference Host 一致 */
+  width: 100%;
+  margin: 16px auto;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
+}
+
+/* 标题行与 Conference 配套 */
+.home-title {
+  margin: 0 0 12px 0;
+  font-size: 48px;           /* 让“Meeting ID”字号一致 */
+  line-height: 1.2;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+/* 输入框统一 */
+.conf-input,
+.conf-panel.join-card input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #fff;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+/* 按钮统一 */
+.conf-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .02s ease;
+  box-sizing: border-box;
+  margin-bottom: 16px;        /* 让按钮之间间距一致 */
+}
+
+.conf-btn.primary {
+  background: #0f172a;       /* 深色主按钮（与你网站一致） */
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.conf-btn.block {
+  width: 100%;
+}
+
+.conf-btn:active {
+  transform: translateY(1px);
+}
+
+
+.conf-table{
+  position:absolute; width:160px; height:160px; box-sizing:border-box; padding:0;
+}
+.conf-table.circle{ border-radius:50%; aspect-ratio:1/1; }
+.conf-table.square{ border-radius:20px; aspect-ratio:1/1; }
+.conf-table.row{ width:180px; height:90px; border-radius:12px; }
+
+.conf-chair{ position:absolute; width:24px; height:24px; border-radius:50%; cursor:pointer; }
+
+.conf-guest-list{ display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; }
+.conf-badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+  border:1px solid #cbd5e1; border-radius:9999px; background:#f8fafc; line-height:1; position:relative; }
+.conf-badge.assigned{ background:#cfe3ff; border-color:#93c5fd; }
+
+.conf-badge-del{
+  position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%;
+  border:1px solid #cbd5e1; background:#fff; font-weight:700; line-height:16px; cursor:pointer; padding:0;
+}
+
+
