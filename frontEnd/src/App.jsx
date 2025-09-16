@@ -122,3 +122,4 @@ export default function App() {
 function genGuestName() {
   return `Guest-${Math.floor(Math.random() * 9000 + 1000)}`;
 }
+
