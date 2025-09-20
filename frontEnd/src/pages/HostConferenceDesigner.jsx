@@ -12,13 +12,13 @@ const ROOM_LAYOUTS = [
     color: "#f8fafc",
     borderColor: "#e5e7eb"
   },
-  {
-    id: "square",
-    name: "Square room", 
-    type: "square",
-    color: "#f0fdf4",
-    borderColor: "#bbf7d0"
-  },
+  // {
+  //   id: "square",
+  //   name: "Square room", 
+  //   type: "square",
+  //   color: "#f0fdf4",
+  //   borderColor: "#bbf7d0"
+  // },
   {
     id: "circle",
     name: "Circular room",
@@ -26,20 +26,20 @@ const ROOM_LAYOUTS = [
     color: "#fef7ff",
     borderColor: "#e9d5ff"
   },
-  {
-    id: "oval",
-    name: "Oval room", 
-    type: "oval",
-    color: "#fffbeb",
-    borderColor: "#fde68a"
-  },
-  {
-    id: "l-shape",
-    name: "L-shape room",
-    type: "l-shape",
-    color: "#eff6ff",
-    borderColor: "#93c5fd"
-  }
+  // {
+  //   id: "oval",
+  //   name: "Oval room", 
+  //   type: "oval",
+  //   color: "#fffbeb",
+  //   borderColor: "#fde68a"
+  // },
+  // {
+  //   id: "l-shape",
+  //   name: "L-shape room",
+  //   type: "l-shape",
+  //   color: "#eff6ff",
+  //   borderColor: "#93c5fd"
+  // }
 ];
 
 // 会议组件配置
@@ -531,6 +531,12 @@ const RoomBackground = ({ layout, roomDimensions, scale }) => {
 };
 
 export default function HostConferenceDesigner({ meetingId, onBack }) {
+  // 新增状态：CSV导入相关
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState(null);
+  const [importStatus, setImportStatus] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  
   // ---------- state ----------
   const [tables, setTables] = useState([]);
   const [guests, setGuests] = useState([]);
