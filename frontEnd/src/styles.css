@@ -436,4 +436,289 @@ html, body, #root { height: 100%; margin: 0; }
   border:1px solid #cbd5e1; background:#fff; font-weight:700; line-height:16px; cursor:pointer; padding:0;
 }
 
+/* conference layout */
+/* 房间布局样式 */
+.conf-room-layouts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
 
+.conf-room-preview {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fafafa;
+  text-align: center;
+}
+
+.conf-room-preview:hover {
+  border-color: #93c5fd;
+  background: #f0f9ff;
+}
+
+.conf-room-preview.selected {
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.conf-room-thumbnail {
+  margin: 0 auto 8px;
+  border: 2px solid;
+}
+
+.conf-room-name {
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.conf-room-info {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.conf-room-background {
+  pointer-events: none;
+}
+
+.conf-custom-dimensions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.conf-custom-dimensions h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+}
+
+.conf-dimension-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.conf-dimension-row label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.conf-input-sm {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* 会议组件样式 */
+.conf-components-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.conf-component-preview {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  text-align: center;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.conf-component-preview:hover {
+  border-color: #93c5fd;
+  background: #f0f9ff;
+}
+
+.conf-component-thumbnail {
+  margin: 0 auto 4px;
+  border: 2px solid;
+}
+
+.conf-component-name {
+  font-weight: 600;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.conf-component-size {
+  font-size: 9px;
+  color: #6b7280;
+}
+
+.conf-component-controls {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* 会议组件在画布中的样式 */
+.conf-component {
+  position: absolute;
+  border: 2px solid;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: move;
+  user-select: none;
+}
+
+.conf-component-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+}
+
+
+
+/* 桌子尺寸控制 */
+.conf-table-title small {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* 旋转控制点样式 */
+.conf-rotation-handle {
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  width: 24px;
+  height: 24px;
+  background: #3b82f6;
+  border-radius: 50%;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: white;
+  z-index: 10;
+  user-select: none;
+}
+
+.conf-rotation-handle:active {
+  cursor: grabbing;
+}
+
+/* 选中状态样式 */
+.conf-table.selected,
+.conf-component.selected {
+  box-shadow: 0 0 0 2px #3b82f6;
+  z-index: 100;
+}
+
+/* 画布控制样式 */
+.conf-canvas-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.conf-zoom-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conf-zoom-btn:hover {
+  background: #f3f4f6;
+}
+
+.conf-zoom-level {
+  font-size: 12px;
+  color: #6b7280;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* 侧边栏调整样式 */
+.conf-sidebar {
+  position: relative;
+  transition: width 0.3s ease;
+  overflow-x: hidden;
+}
+
+.conf-sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: #e5e7eb;
+  cursor: col-resize;
+}
+
+.conf-sidebar-resizer:hover {
+  background: #3b82f6;
+}
+
+.conf-sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  right: -15px;
+  width: 30px;
+  height: 60px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  z-index: 1000;
+}
+
+/* 画布拖动样式 */
+.conf-scroll {
+  cursor: grab;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.conf-scroll:active {
+  cursor: grabbing;
+}
+
+/* 组件旋转后的椅子位置调整 */
+.conf-chair {
+  transform-origin: center;
+}
+
+/* 房间背景样式 */
+.conf-room-background {
+  box-sizing: border-box;
+}
