@@ -7,35 +7,35 @@ import { jsPDF } from "jspdf";
 const ROOM_LAYOUTS = [
   {
     id: "rectangle",
-    name: "矩形会议室",
+    name: "Rectangular room",
     type: "rectangle",
     color: "#f8fafc",
     borderColor: "#e5e7eb"
   },
   {
     id: "square",
-    name: "方形会议室", 
+    name: "Square room", 
     type: "square",
     color: "#f0fdf4",
     borderColor: "#bbf7d0"
   },
   {
     id: "circle",
-    name: "圆形会议厅",
+    name: "Circular room",
     type: "circle",
     color: "#fef7ff",
     borderColor: "#e9d5ff"
   },
   {
     id: "oval",
-    name: "椭圆形会议厅", 
+    name: "Oval room", 
     type: "oval",
     color: "#fffbeb",
     borderColor: "#fde68a"
   },
   {
     id: "l-shape",
-    name: "L型会议室",
+    name: "L-shape room",
     type: "l-shape",
     color: "#eff6ff",
     borderColor: "#93c5fd"
@@ -46,7 +46,7 @@ const ROOM_LAYOUTS = [
 const CONFERENCE_COMPONENTS = [
   {
     id: "podium",
-    name: "讲台",
+    name: "Podium",
     type: "podium",
     width: 100,
     height: 60,
@@ -57,7 +57,7 @@ const CONFERENCE_COMPONENTS = [
   },
   {
     id: "door",
-    name: "门",
+    name: "Door",
     type: "door",
     width: 80,
     height: 120,
@@ -68,7 +68,7 @@ const CONFERENCE_COMPONENTS = [
   },
   {
     id: "window",
-    name: "窗户",
+    name: "Window",
     type: "window",
     width: 200,
     height: 40,
@@ -79,7 +79,7 @@ const CONFERENCE_COMPONENTS = [
   },
   {
     id: "stage",
-    name: "舞台",
+    name: "Stage",
     type: "stage",
     width: 300,
     height: 80,
@@ -90,7 +90,7 @@ const CONFERENCE_COMPONENTS = [
   },
   {
     id: "screen",
-    name: "投影幕",
+    name: "Screen",
     type: "screen",
     width: 60,
     height: 200,
@@ -145,9 +145,9 @@ const RotationHandle = ({ onRotate }) => {
 const CanvasControls = ({ scale, onZoomIn, onZoomOut, onResetView }) => {
   return (
     <div className="conf-canvas-controls">
-      <button className="conf-zoom-btn" onClick={onZoomIn} title="放大">+</button>
-      <button className="conf-zoom-btn" onClick={onZoomOut} title="缩小">-</button>
-      <button className="conf-zoom-btn" onClick={onResetView} title="重置视图">⟳</button>
+      <button className="conf-zoom-btn" onClick={onZoomIn} title="Larger">+</button>
+      <button className="conf-zoom-btn" onClick={onZoomOut} title="Smaller">-</button>
+      <button className="conf-zoom-btn" onClick={onResetView} title="Reset Layout">⟳</button>
       <span className="conf-zoom-level">{Math.round(scale * 100)}%</span>
     </div>
   );
@@ -175,7 +175,7 @@ const Table = ({ table, onMove, onChairDrop, onChairClick, onDelete, isSelected,
   };
 
   const handleDoubleClick = () => {
-    if (window.confirm(`确定要删除桌子 "${table.label}" 吗？`)) {
+    if (window.confirm(`Are you sure to remove "${table.label}" ？`)) {
       onDelete(table.id, "table");
     }
   };
@@ -317,7 +317,7 @@ const ConferenceComponent = ({ component, onMove, onDelete, isSelected, onSelect
   };
 
   const handleDoubleClick = () => {
-    if (window.confirm(`确定要删除"${component.name}"吗？`)) {
+    if (window.confirm(`Are you sure to remove"${component.name}"？`)) {
       onDelete(component.id, "conference-component");
     }
   };
@@ -545,6 +545,7 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
   const [canvasScale, setCanvasScale] = useState(1);
   const [canvasPosition, setCanvasPosition] = useState({ x: 0, y: 0 });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0, canvasX: 0, canvasY: 0 });
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [customWidth, setCustomWidth] = useState(1600);
@@ -659,6 +660,26 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
           });
         }
       }
+    } else if (type === "row") {
+      // 新增：行式座位排列
+      for (let i = 0; i < seats; i++) {
+        // 等间距分布在桌子宽度上
+        const chairX = (width / (seats + 1)) * (i + 1);
+        // top 固定为 -30（在桌子顶部上方）
+        const chairY = -30;
+        
+        // 应用旋转
+        const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
+        const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
+        
+        chairs.push({
+          id: `${table.id}-chair-${i}`,
+          left: `${rotatedX - 12}px`,
+          top: `${rotatedY - 12}px`,
+          guestId: "",
+          guestInitial: ""
+        });
+      }
     } else {
       const half = Math.ceil(seats / 2);
       for (let i = 0; i < half; i++) {
@@ -708,7 +729,7 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
   // 添加会议组件
   const addConferenceComponent = (component) => {
     if (!selectedRoomLayout) {
-      alert("请先选择并应用房间布局！");
+      alert("Please select and apply a room layout first!");
       return;
     }
 
@@ -782,9 +803,12 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
     if (e.target.closest('.conf-table') || e.target.closest('.conf-component')) return;
     
     setIsDraggingCanvas(true);
-    setCanvasPosition({
-      x: e.clientX - canvasPosition.x,
-      y: e.clientY - canvasPosition.y
+    // 记录鼠标点击时的位置和当前的画布位置
+    setStartPos({
+      x: e.clientX,
+      y: e.clientY,
+      canvasX: canvasPosition.x,
+      canvasY: canvasPosition.y
     });
     setSelectedElement(null);
   };
@@ -793,8 +817,14 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
     if (!isDraggingCanvas) return;
 
     const handleMouseMove = (e) => {
-      const newX = e.clientX - canvasPosition.x;
-      const newY = e.clientY - canvasPosition.y;
+      // 计算鼠标移动的偏移量
+      const deltaX = e.clientX - startPos.x;
+      const deltaY = e.clientY - startPos.y;
+      
+      // 更新画布位置，保持鼠标抓住的点在画布上的相对位置不变
+      const newX = startPos.canvasX + deltaX;
+      const newY = startPos.canvasY + deltaY;
+      
       setCanvasPosition({ x: newX, y: newY });
     };
 
@@ -809,7 +839,7 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDraggingCanvas, canvasPosition]);
+  }, [isDraggingCanvas, startPos]);
 
   // 侧边栏宽度调整
   const handleSidebarResize = (e) => {
@@ -820,7 +850,7 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
   // ---------- tables ----------
   function addTable() {
     if (!selectedRoomLayout) {
-      alert("请先选择并应用房间布局！");
+      alert("Please select and apply a room layout first!");
       return;
     }
 
@@ -832,17 +862,20 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
       const countSameType = prev.filter((t) => (t.type === "row") === isRow).length + 1;
       const label = (isRow ? "R" : "T") + countSameType;
       
+      // 对于 row 类型，使用固定的较小高度
+      const tableHeightForRow = isRow ? 60 : tableHeight;
+      
       const newTable = {
         id,
         type,
         label,
         seats,
         width: tableWidth,
-        height: tableType === "row" ? 80 : tableHeight,
+        height: tableHeightForRow,
         x: 100,
         y: 100,
         rotation: 0,
-        chairs: calculateChairPositions({ id, type, seats, width: tableWidth, height: tableType === "row" ? 80 : tableHeight })
+        chairs: calculateChairPositions({ id, type, seats, width: tableWidth, height: tableHeightForRow })
       };
       
       return [...prev, newTable];
@@ -977,7 +1010,7 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
 
   // ---------- actions ----------
   function resetLayout() {
-    if (!confirm("确定要清空整个画布吗？")) return;
+    if (!confirm("Reset the ALL layout")) return;
     setTables([]);
     setGuests([]);
     setComponents([]);
@@ -987,7 +1020,7 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
 
   function smartArrange() {
     if (!tables.length) {
-      alert("请先添加桌子！");
+      alert("Please add table first");
       return;
     }
 
@@ -1115,6 +1148,9 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
     } else if (tableType === "square") {
       setTableWidth(120);
       setTableHeight(120);
+    } else if (tableType === "row") {
+      setTableWidth(180);
+      setTableHeight(60); // 行式座位使用较小高度
     } else {
       setTableWidth(180);
       setTableHeight(80);
@@ -1286,182 +1322,182 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
 
                 <div className="conf-row mt-8">
                   <div>Width (cm):&nbsp;</div>
-                  <input
-                    type="number"
-                    value={tableWidth}
-                    onChange={(e) => setTableWidth(Number(e.target.value))}
-                    min="60"
-                    max="300"
-                    className="conf-input-sm"
-                  />
-                </div>
-
-                <div className="conf-row mt-8">
-                  <div>Height (cm):&nbsp;</div>
-                  <input
-                    type="number"
-                    value={tableHeight}
-                    onChange={(e) => setTableHeight(Number(e.target.value))}
-                    min="60"
-                    max="300"
-                    className="conf-input-sm"
-                  />
-                </div>
-
-                <div className="conf-row mt-8">
-                  <button className="conf-btn" onClick={addTable}>Add Table »</button>
-                </div>
-              </div>
-
-              <div className="conf-panel">
-                <h3>Attendees</h3>
-                <input ref={nameRef} placeholder="Name" className="conf-input" />
-                <input ref={deptRef} placeholder="Department" className="conf-input" />
-                <input ref={posRef} placeholder="Position" className="conf-input" />
-
-                <div className="conf-notes">
-                  <div className="conf-row">
                     <input
-                      value={noteInput}
-                      onChange={(e) => setNoteInput(e.target.value)}
-                      placeholder="Note / Tag"
-                      className="conf-input"
+                      type="number"
+                      value={tableWidth}
+                      onChange={(e) => setTableWidth(Number(e.target.value))}
+                      min="60"
+                      max="300"
+                      className="conf-input-sm"
                     />
-                    <button className="conf-btn" onClick={addNote} aria-label="Add note">＋</button>
                   </div>
-                  <div className="conf-pending-notes">
-                    {pendingNotes.map((n, i) => (
-                      <span className="conf-chip" key={n + i}>
-                        {n}
-                        <span className="x" onClick={() => removePendingNote(i)} aria-label="remove">×</span>
-                      </span>
+
+                  <div className="conf-row mt-8">
+                    <div>Height (cm):&nbsp;</div>
+                    <input
+                      type="number"
+                      value={tableHeight}
+                      onChange={(e) => setTableHeight(Number(e.target.value))}
+                      min="60"
+                      max="300"
+                      className="conf-input-sm"
+                    />
+                  </div>
+
+                  <div className="conf-row mt-8">
+                    <button className="conf-btn" onClick={addTable}>Add Table »</button>
+                  </div>
+                </div>
+
+                <div className="conf-panel">
+                  <h3>Attendees</h3>
+                  <input ref={nameRef} placeholder="Name" className="conf-input" />
+                  <input ref={deptRef} placeholder="Department" className="conf-input" />
+                  <input ref={posRef} placeholder="Position" className="conf-input" />
+
+                  <div className="conf-notes">
+                    <div className="conf-row">
+                      <input
+                        value={noteInput}
+                        onChange={(e) => setNoteInput(e.target.value)}
+                        placeholder="Note / Tag"
+                        className="conf-input"
+                      />
+                      <button className="conf-btn" onClick={addNote} aria-label="Add note">＋</button>
+                    </div>
+                    <div className="conf-pending-notes">
+                      {pendingNotes.map((n, i) => (
+                        <span className="conf-chip" key={n + i}>
+                          {n}
+                          <span className="x" onClick={() => removePendingNote(i)} aria-label="remove">×</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button className="conf-btn block" onClick={addGuest}>Add Attendee</button>
+
+                  {/* Guests 列表（可拖拽） */}
+                  <div className="conf-guest-list mt-8">
+                    {guests.map(guest => (
+                      <GuestBadge
+                        key={guest.id}
+                        guest={guest}
+                        onRemove={removeGuest}
+                        passFilter={passFilter}
+                      />
                     ))}
                   </div>
+
+                  {/* Filters */}
+                  <div className="conf-filters">
+                    <h4 style={{ marginBottom: 8 }}>Filters</h4>
+                    <div className="conf-filter-row">
+                      <div className="conf-filter-label">Department:</div>
+                      <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)}>
+                        {deptOptions.map((opt) => (
+                          <option key={opt || "ALL"} value={opt}>
+                            {opt || "All Departments"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="conf-filter-row">
+                      <div className="conf-filter-label">Position:</div>
+                      <select value={filterPos} onChange={(e) => setFilterPos(e.target.value)}>
+                        {posOptions.map((opt) => (
+                          <option key={opt || "ALL"} value={opt}>
+                            {opt || "All Positions"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="conf-filter-buttons">
+                      <button className="conf-btn" onClick={clearFilters}>Clear Filters</button>
+                    </div>
+                  </div>
+
+                  <button className="conf-btn mt-12" onClick={onBack}>
+                    Back to menu
+                  </button>
                 </div>
+              </>
+            )}
+            <div 
+              className="conf-sidebar-resizer"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                document.addEventListener('mousemove', handleSidebarResize);
+                document.addEventListener('mouseup', () => {
+                  document.removeEventListener('mousemove', handleSidebarResize);
+                });
+              }}
+            />
+            <button 
+              className="conf-sidebar-toggle"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            >
+              {isSidebarCollapsed ? '›' : '‹'}
+            </button>
+          </aside>
 
-                <button className="conf-btn block" onClick={addGuest}>Add Attendee</button>
-
-                {/* Guests 列表（可拖拽） */}
-                <div className="conf-guest-list mt-8">
-                  {guests.map(guest => (
-                    <GuestBadge
-                      key={guest.id}
-                      guest={guest}
-                      onRemove={removeGuest}
-                      passFilter={passFilter}
+          {/* 右侧画布 */}
+          <section className="conf-canvas">
+            <CanvasControls 
+              scale={canvasScale}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              onResetView={resetView}
+            />
+            <div 
+              className="conf-scroll"
+              ref={canvasContainerRef}
+              onMouseDown={handleCanvasMouseDown}
+              style={{ cursor: isDraggingCanvas ? 'grabbing' : 'grab' }}
+            >
+              {selectedRoomLayout && roomDimensions.width > 0 && (
+                <div 
+                  id="conf-board" 
+                  ref={boardRef}
+                  style={{
+                    width: roomDimensions.width,
+                    height: roomDimensions.height,
+                    transform: `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${canvasScale})`,
+                    transformOrigin: '0 0'
+                  }}
+                >
+                  <RoomBackground 
+                    layout={selectedRoomLayout} 
+                    roomDimensions={roomDimensions}
+                    scale={canvasScale} 
+                  />
+                  {tables.map(table => (
+                    <Table
+                      key={table.id}
+                      table={table}
+                      onMove={moveTable}
+                      onChairDrop={assignGuestToChair}
+                      onChairClick={removeGuestFromChair}
+                      onDelete={deleteComponent}
+                      isSelected={selectedElement === table.id}
+                      onSelect={selectElement}
+                    />
+                  ))}
+                  {components.map(component => (
+                    <ConferenceComponent
+                      key={component.id}
+                      component={component}
+                      onMove={moveComponent}
+                      onDelete={deleteComponent}
+                      isSelected={selectedElement === component.id}
+                      onSelect={selectElement}
                     />
                   ))}
                 </div>
-
-                {/* Filters */}
-                <div className="conf-filters">
-                  <h4 style={{ marginBottom: 8 }}>Filters</h4>
-                  <div className="conf-filter-row">
-                    <div className="conf-filter-label">Department:</div>
-                    <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)}>
-                      {deptOptions.map((opt) => (
-                        <option key={opt || "ALL"} value={opt}>
-                          {opt || "All Departments"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="conf-filter-row">
-                    <div className="conf-filter-label">Position:</div>
-                    <select value={filterPos} onChange={(e) => setFilterPos(e.target.value)}>
-                      {posOptions.map((opt) => (
-                        <option key={opt || "ALL"} value={opt}>
-                          {opt || "All Positions"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="conf-filter-buttons">
-                    <button className="conf-btn" onClick={clearFilters}>Clear Filters</button>
-                  </div>
-                </div>
-
-                <button className="conf-btn mt-12" onClick={onBack}>
-                  Back to menu
-                </button>
-              </div>
-            </>
-          )}
-          <div 
-            className="conf-sidebar-resizer"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              document.addEventListener('mousemove', handleSidebarResize);
-              document.addEventListener('mouseup', () => {
-                document.removeEventListener('mousemove', handleSidebarResize);
-              });
-            }}
-          />
-          <button 
-            className="conf-sidebar-toggle"
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          >
-            {isSidebarCollapsed ? '›' : '‹'}
-          </button>
-        </aside>
-
-        {/* 右侧画布 */}
-        <section className="conf-canvas">
-          <CanvasControls 
-            scale={canvasScale}
-            onZoomIn={zoomIn}
-            onZoomOut={zoomOut}
-            onResetView={resetView}
-          />
-          <div 
-            className="conf-scroll"
-            ref={canvasContainerRef}
-            onMouseDown={handleCanvasMouseDown}
-            style={{ cursor: isDraggingCanvas ? 'grabbing' : 'grab' }}
-          >
-            {selectedRoomLayout && roomDimensions.width > 0 && (
-              <div 
-                id="conf-board" 
-                ref={boardRef}
-                style={{
-                  width: roomDimensions.width,
-                  height: roomDimensions.height,
-                  transform: `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${canvasScale})`,
-                  transformOrigin: '0 0'
-                }}
-              >
-                <RoomBackground 
-                  layout={selectedRoomLayout} 
-                  roomDimensions={roomDimensions}
-                  scale={canvasScale} 
-                />
-                {tables.map(table => (
-                  <Table
-                    key={table.id}
-                    table={table}
-                    onMove={moveTable}
-                    onChairDrop={assignGuestToChair}
-                    onChairClick={removeGuestFromChair}
-                    onDelete={deleteComponent}
-                    isSelected={selectedElement === table.id}
-                    onSelect={selectElement}
-                  />
-                ))}
-                {components.map(component => (
-                  <ConferenceComponent
-                    key={component.id}
-                    component={component}
-                    onMove={moveComponent}
-                    onDelete={deleteComponent}
-                    isSelected={selectedElement === component.id}
-                    onSelect={selectElement}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
