@@ -531,7 +531,7 @@ const RoomBackground = ({ layout, roomDimensions, scale }) => {
 };
 
 export default function HostConferenceDesigner({ meetingId, onBack }) {
-  // 新增状态：CSV导入相关
+  // 新增状态：CSV导入相关+ add button!
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [importStatus, setImportStatus] = useState('');
