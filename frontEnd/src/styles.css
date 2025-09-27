@@ -722,3 +722,209 @@ html, body, #root { height: 100%; margin: 0; }
 .conf-room-background {
   box-sizing: border-box;
 }
+
+/* Conference Specific Styles Only */
+.conf-scale-info {
+  background: #e0f2fe;
+  border: 1px solid #b3e0ff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0369a1;
+  text-align: center;
+}
+
+.conf-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.conf-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.conf-modal h3 {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+}
+
+.conf-modal-content {
+  margin: 16px 0;
+}
+
+.conf-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.capacity-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.capacity-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.capacity-row:last-child {
+  border-bottom: none;
+}
+
+.conf-properties-sidebar {
+  width: 280px;
+  background: #f8fafc;
+  border-left: 1px solid #e5e7eb;
+  padding: 16px;
+  height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+
+.conf-properties-panel h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+}
+
+.conf-properties-panel p {
+  margin: 0;
+  color: #64748b;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.property-group {
+  margin-bottom: 16px;
+}
+
+.property-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.property-group span {
+  display: block;
+  font-size: 14px;
+  color: #0f172a;
+  padding: 4px 0;
+}
+
+.conf-table-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.conf-table-preview {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fafafa;
+  text-align: center;
+}
+
+.conf-table-preview:hover {
+  border-color: #93c5fd;
+  background: #f0f9ff;
+}
+
+.conf-table-preview.selected {
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.conf-table-thumbnail {
+  margin: 0 auto 8px;
+  border: 2px solid;
+}
+
+.conf-table-name {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.conf-body {
+  display: grid;
+  grid-template-columns: 320px 1fr 300px;
+  gap: 16px;
+  padding: 16px 20px;
+  min-height: calc(100vh - 110px);
+}
+
+@media (max-width: 1200px) {
+  .conf-body {
+    grid-template-columns: 280px 1fr 250px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .conf-body {
+    grid-template-columns: 250px 1fr;
+  }
+  
+  .conf-properties-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .conf-body {
+    grid-template-columns: 1fr;
+    padding: 8px;
+  }
+  
+  .conf-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+  }
+  
+  .conf-sidebar.open {
+    left: 0;
+  }
+}
+
+#conf-board {
+  min-width: 1600px;
+  min-height: 900px;
+  background-size: 24px 24px;
+}
+
+.conf-input-sm {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+}

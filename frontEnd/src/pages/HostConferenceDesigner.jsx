@@ -12,13 +12,6 @@ const ROOM_LAYOUTS = [
     color: "#f8fafc",
     borderColor: "#e5e7eb"
   },
-  // {
-  //   id: "square",
-  //   name: "Square room", 
-  //   type: "square",
-  //   color: "#f0fdf4",
-  //   borderColor: "#bbf7d0"
-  // },
   {
     id: "circle",
     name: "Circular room",
@@ -26,20 +19,37 @@ const ROOM_LAYOUTS = [
     color: "#fef7ff",
     borderColor: "#e9d5ff"
   },
-  // {
-  //   id: "oval",
-  //   name: "Oval room", 
-  //   type: "oval",
-  //   color: "#fffbeb",
-  //   borderColor: "#fde68a"
-  // },
-  // {
-  //   id: "l-shape",
-  //   name: "L-shape room",
-  //   type: "l-shape",
-  //   color: "#eff6ff",
-  //   borderColor: "#93c5fd"
-  // }
+];
+
+// 桌子类型配置
+const TABLE_TYPES = [
+  {
+    id: "circle",
+    name: "Circular Table",
+    type: "circle",
+    color: "#eaffea",
+    borderColor: "#22c55e",
+    defaultWidth: 120,
+    defaultHeight: 120
+  },
+  {
+    id: "square",
+    name: "Square Table",
+    type: "square", 
+    color: "#fffdf5",
+    borderColor: "#f59e0b",
+    defaultWidth: 120,
+    defaultHeight: 120
+  },
+  {
+    id: "row",
+    name: "Row of Seats",
+    type: "row",
+    color: "#f0f9ff",
+    borderColor: "#0ea5e9",
+    defaultWidth: 180,
+    defaultHeight: 60
+  }
 ];
 
 // 会议组件配置
@@ -101,6 +111,282 @@ const CONFERENCE_COMPONENTS = [
   }
 ];
 
+// CSV Import Modal Component
+const CSVImportModal = ({ isOpen, onClose, onImport }) => {
+  const [file, setFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    
+    setIsLoading(true);
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const importedGuests = lines.slice(1).map((line, index) => {
+        const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const guest = {
+          id: `imported-${Date.now()}-${index}`,
+          name: values[0] || '',
+          department: values[1] || '',
+          position: values[2] || '',
+          notes: values[3] ? values[3].split(';').map(n => n.trim()) : [],
+          tableId: null
+        };
+        return guest;
+      }).filter(guest => guest.name);
+
+      onImport(importedGuests);
+      onClose();
+    } catch (error) {
+      alert('CSV import failed. Please check the file format and try again.');
+      console.error('CSV import error:', error);
+    }
+    setIsLoading(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="conf-modal-overlay">
+      <div className="conf-modal">
+        <h3>Import Attendees from CSV</h3>
+        <p>CSV format: Name, Department, Position, Tags (semicolon separated)</p>
+        
+        <div className="conf-modal-content">
+          <input 
+            type="file" 
+            accept=".csv" 
+            onChange={handleFileChange}
+            className="conf-input"
+          />
+          
+          <div className="conf-modal-actions">
+            <button 
+              className="conf-btn" 
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button 
+              className="conf-btn primary" 
+              onClick={handleImport}
+              disabled={!file || isLoading}
+            >
+              {isLoading ? 'Importing...' : 'Import'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Capacity Estimation Modal
+const CapacityEstimationModal = ({ isOpen, onClose, roomDimensions, onAutoArrange }) => {
+  const [estimation, setEstimation] = useState(null);
+
+  useEffect(() => {
+    if (isOpen && roomDimensions.width > 0 && roomDimensions.height > 0) {
+      calculateCapacity();
+    }
+  }, [isOpen, roomDimensions]);
+
+  const calculateCapacity = () => {
+    const roomArea = roomDimensions.width * roomDimensions.height;
+    
+    const tableArea = 120 * 120;
+    const spacingFactor = 1.5;
+    
+    const maxTables = Math.floor(roomArea / (tableArea * spacingFactor));
+    const estimatedSeats = maxTables * 6;
+    
+    setEstimation({
+      maxTables,
+      estimatedSeats,
+      roomArea: Math.round(roomArea / 10000),
+      utilization: Math.round((maxTables * tableArea) / roomArea * 100)
+    });
+  };
+
+  const handleAutoArrange = () => {
+    if (window.confirm(`This will clear all existing tables and add ${estimation.maxTables} new tables. Continue?`)) {
+      onAutoArrange(estimation.maxTables);
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="conf-modal-overlay">
+      <div className="conf-modal">
+        <h3>Room Capacity Estimation</h3>
+        
+        <div className="conf-modal-content">
+          {estimation ? (
+            <div className="capacity-results">
+              <div className="capacity-row">
+                <span>Room Area:</span>
+                <span>{estimation.roomArea} m²</span>
+              </div>
+              <div className="capacity-row">
+                <span>Max Tables:</span>
+                <span>{estimation.maxTables}</span>
+              </div>
+              <div className="capacity-row">
+                <span>Estimated Seats:</span>
+                <span>{estimation.estimatedSeats}</span>
+              </div>
+              <div className="capacity-row">
+                <span>Space Utilization:</span>
+                <span>{estimation.utilization}%</span>
+              </div>
+            </div>
+          ) : (
+            <p>Calculating...</p>
+          )}
+          
+          <div className="conf-modal-actions">
+            <button className="conf-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button 
+              className="conf-btn primary" 
+              onClick={handleAutoArrange}
+              disabled={!estimation}
+            >
+              Auto Arrange Tables
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Properties Panel Component
+const PropertiesPanel = ({ selectedElement, tables, components, onUpdate }) => {
+  const element = useMemo(() => {
+    if (!selectedElement) return null;
+    
+    const table = tables.find(t => t.id === selectedElement);
+    if (table) return { ...table, type: 'table' };
+    
+    const component = components.find(c => c.id === selectedElement);
+    if (component) return { ...component, type: 'component' };
+    
+    return null;
+  }, [selectedElement, tables, components]);
+
+  const handleSizeChange = (width, height) => {
+    if (!element) return;
+    
+    if (element.type === 'table') {
+      onUpdate('table', element.id, { 
+        width, 
+        height,
+        chairs: calculateChairPositions({ ...element, width, height })
+      });
+    } else {
+      onUpdate('component', element.id, { width, height });
+    }
+  };
+
+  if (!element) {
+    return (
+      <div className="conf-properties-panel">
+        <h3>Properties</h3>
+        <p>Select an element to edit its properties</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="conf-properties-panel">
+      <h3>Properties - {element.name || element.label}</h3>
+      
+      <div className="property-group">
+        <label>Width (cm)</label>
+        <input
+          type="number"
+          value={element.width}
+          onChange={(e) => handleSizeChange(Number(e.target.value), element.height)}
+          min="20"
+          max="500"
+          className="conf-input-sm"
+        />
+      </div>
+      
+      <div className="property-group">
+        <label>Height (cm)</label>
+        <input
+          type="number"
+          value={element.height}
+          onChange={(e) => handleSizeChange(element.width, Number(e.target.value))}
+          min="20"
+          max="500"
+          className="conf-input-sm"
+        />
+      </div>
+      
+      {element.type === 'table' && (
+        <>
+          <div className="property-group">
+            <label>Seats</label>
+            <span>{element.seats}</span>
+          </div>
+          <div className="property-group">
+            <label>Assigned</label>
+            <span>{element.chairs.filter(c => c.guestId).length}/{element.seats}</span>
+          </div>
+        </>
+      )}
+      
+      <div className="property-group">
+        <label>Position</label>
+        <span>X: {Math.round(element.x)}cm, Y: {Math.round(element.y)}cm</span>
+      </div>
+      
+      {element.rotation !== undefined && (
+        <div className="property-group">
+          <label>Rotation</label>
+          <span>{Math.round(element.rotation)}°</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 桌子类型预览组件
+const TableTypePreview = ({ tableType, onSelect, isSelected }) => {
+  return (
+    <div 
+      className={`conf-table-preview ${isSelected ? 'selected' : ''}`}
+      onClick={() => onSelect(tableType)}
+    >
+      <div 
+        className={`conf-table-thumbnail ${tableType.type}`}
+        style={{
+          backgroundColor: tableType.color,
+          borderColor: tableType.borderColor,
+          width: '60px',
+          height: '60px',
+          borderRadius: tableType.type === 'circle' ? '50%' : '8px'
+        }}
+      />
+      <div className="conf-table-name">{tableType.name}</div>
+    </div>
+  );
+};
+
 // 组件化椅子元素
 const Chair = ({ chair, onDrop, onClick }) => {
   const handleDragOver = (e) => e.preventDefault();
@@ -145,9 +431,9 @@ const RotationHandle = ({ onRotate }) => {
 const CanvasControls = ({ scale, onZoomIn, onZoomOut, onResetView }) => {
   return (
     <div className="conf-canvas-controls">
-      <button className="conf-zoom-btn" onClick={onZoomIn} title="Larger">+</button>
-      <button className="conf-zoom-btn" onClick={onZoomOut} title="Smaller">-</button>
-      <button className="conf-zoom-btn" onClick={onResetView} title="Reset Layout">⟳</button>
+      <button className="conf-zoom-btn" onClick={onZoomIn} title="Zoom In">+</button>
+      <button className="conf-zoom-btn" onClick={onZoomOut} title="Zoom Out">-</button>
+      <button className="conf-zoom-btn" onClick={onResetView} title="Reset View">⟳</button>
       <span className="conf-zoom-level">{Math.round(scale * 100)}%</span>
     </div>
   );
@@ -175,7 +461,7 @@ const Table = ({ table, onMove, onChairDrop, onChairClick, onDelete, isSelected,
   };
 
   const handleDoubleClick = () => {
-    if (window.confirm(`Are you sure to remove "${table.label}" ？`)) {
+    if (window.confirm(`Are you sure to remove "${table.label}"?`)) {
       onDelete(table.id, "table");
     }
   };
@@ -317,7 +603,7 @@ const ConferenceComponent = ({ component, onMove, onDelete, isSelected, onSelect
   };
 
   const handleDoubleClick = () => {
-    if (window.confirm(`Are you sure to remove"${component.name}"？`)) {
+    if (window.confirm(`Are you sure to remove "${component.name}"?`)) {
       onDelete(component.id, "conference-component");
     }
   };
@@ -480,7 +766,7 @@ const RoomLayoutPreview = ({ layout, onSelect, isSelected }) => {
           borderColor: layout.borderColor,
           width: '60px',
           height: '60px',
-          borderRadius: layout.type === 'circle' || layout.type === 'oval' ? '50%' : '8px'
+          borderRadius: layout.type === 'circle' ? '50%' : '8px'
         }}
       />
       <div className="conf-room-name">{layout.name}</div>
@@ -517,7 +803,7 @@ const RoomBackground = ({ layout, roomDimensions, scale }) => {
   const roomStyle = {
     backgroundColor: layout.color,
     border: `2px solid ${layout.borderColor}`,
-    borderRadius: layout.type === 'circle' || layout.type === 'oval' ? '50%' : '12px',
+    borderRadius: layout.type === 'circle' ? '50%' : '12px',
     width: roomDimensions.width,
     height: roomDimensions.height,
     position: 'absolute',
@@ -530,13 +816,118 @@ const RoomBackground = ({ layout, roomDimensions, scale }) => {
   return <div className="conf-room-background" style={roomStyle} />;
 };
 
-export default function HostConferenceDesigner({ meetingId, onBack }) {
-  // 新增状态：CSV导入相关+ add button!
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState(null);
-  const [importStatus, setImportStatus] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
+// 计算椅子位置（考虑尺寸比例）
+const calculateChairPositions = (table) => {
+  const chairs = [];
+  const { type, seats, width = 120, height = 120, rotation = 0 } = table;
   
+  const scaleFactor = Math.min(width, height) / 120;
+  const radRotation = rotation * (Math.PI / 180);
+  
+  if (type === "circle") {
+    const r = (width / 2) + 25 * scaleFactor;
+    for (let i = 0; i < seats; i++) {
+      const a = (2 * Math.PI * i) / seats;
+      const chairX = (width / 2) + r * Math.cos(a);
+      const chairY = (height / 2) + r * Math.sin(a);
+      
+      const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
+      const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
+      
+      chairs.push({
+        id: `${table.id}-chair-${i}`,
+        left: `${rotatedX - 12}px`,
+        top: `${rotatedY - 12}px`,
+        guestId: "",
+        guestInitial: ""
+      });
+    }
+  } else if (type === "square") {
+    const per = Math.ceil(seats / 4);
+    let k = 0;
+    for (let s = 0; s < 4; s++) {
+      for (let i = 0; i < per && k < seats; i++, k++) {
+        let chairX, chairY;
+        if (s === 0) {
+          chairX = (width / (per + 1)) * (i + 1);
+          chairY = -30;
+        } else if (s === 1) {
+          chairX = width + 6;
+          chairY = (height / (per + 1)) * (i + 1);
+        } else if (s === 2) {
+          chairX = (width / (per + 1)) * (i + 1);
+          chairY = height + 6;
+        } else {
+          chairX = -30;
+          chairY = (height / (per + 1)) * (i + 1);
+        }
+        
+        const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
+        const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
+        
+        chairs.push({
+          id: `${table.id}-chair-${k}`,
+          left: `${rotatedX - 12}px`,
+          top: `${rotatedY - 12}px`,
+          guestId: "",
+          guestInitial: ""
+        });
+      }
+    }
+  } else if (type === "row") {
+    for (let i = 0; i < seats; i++) {
+      const chairX = (width / (seats + 1)) * (i + 1);
+      const chairY = -30;
+      
+      const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
+      const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
+      
+      chairs.push({
+        id: `${table.id}-chair-${i}`,
+        left: `${rotatedX - 12}px`,
+        top: `${rotatedY - 12}px`,
+        guestId: "",
+        guestInitial: ""
+      });
+    }
+  } else {
+    const half = Math.ceil(seats / 2);
+    for (let i = 0; i < half; i++) {
+      const chairX = (width / (half + 1)) * (i + 1);
+      const chairY = -30;
+      
+      const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
+      const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
+      
+      chairs.push({
+        id: `${table.id}-chair-top-${i}`,
+        left: `${rotatedX - 12}px`,
+        top: `${rotatedY - 12}px`,
+        guestId: "",
+        guestInitial: ""
+      });
+    }
+    for (let i = 0; i < seats - half; i++) {
+      const chairX = (width / (half + 1)) * (i + 1);
+      const chairY = height + 6;
+      
+      const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
+      const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
+      
+      chairs.push({
+        id: `${table.id}-chair-bottom-${i}`,
+        left: `${rotatedX - 12}px`,
+        top: `${rotatedY - 12}px`,
+        guestId: "",
+        guestInitial: ""
+      });
+    }
+  }
+  
+  return chairs;
+};
+
+export default function HostConferenceDesigner({ meetingId, onBack }) {
   // ---------- state ----------
   const [tables, setTables] = useState([]);
   const [guests, setGuests] = useState([]);
@@ -544,24 +935,25 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
   const [seq, setSeq] = useState(1);
   const [selectedRoomLayout, setSelectedRoomLayout] = useState(null);
   const [roomDimensions, setRoomDimensions] = useState({
-    width: 0,
-    height: 0
+    width: 1600,
+    height: 900
   });
   const [selectedElement, setSelectedElement] = useState(null);
   const [canvasScale, setCanvasScale] = useState(1);
   const [canvasPosition, setCanvasPosition] = useState({ x: 0, y: 0 });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0, canvasX: 0, canvasY: 0 });
-  const [sidebarWidth, setSidebarWidth] = useState(300);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [customWidth, setCustomWidth] = useState(1600);
-  const [customHeight, setCustomHeight] = useState(900);
-
+  
+  // Modals
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isCapacityModalOpen, setIsCapacityModalOpen] = useState(false);
+  
   // table controls
-  const [tableType, setTableType] = useState("circle");
+  const [selectedTableType, setSelectedTableType] = useState(TABLE_TYPES[0]);
   const [tableSeats, setTableSeats] = useState(6);
   const [tableWidth, setTableWidth] = useState(120);
   const [tableHeight, setTableHeight] = useState(120);
+  const [tableQuantity, setTableQuantity] = useState(1);
 
   // component controls
   const [selectedComponent, setSelectedComponent] = useState(CONFERENCE_COMPONENTS[0]);
@@ -585,150 +977,32 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
 
   // ---------- helpers ----------
   const uid = () => {
-    const id = "id" + (seq + 1);
-    setSeq((s) => s + 1);
-    return id;
+    return `id-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   };
 
-  const deptOptions = useMemo(() => {
-    const s = new Set();
-    guests.forEach((g) => g.department && s.add(g.department));
-    return ["", ...Array.from(s)];
-  }, [guests]);
 
-  const posOptions = useMemo(() => {
-    const s = new Set();
-    guests.forEach((g) => g.position && s.add(g.position));
-    return ["", ...Array.from(s)];
-  }, [guests]);
+    const deptOptions = useMemo(() => {
+      const s = new Set();
+      guests.forEach((g) => g.department && s.add(g.department));
+      return ["", ...Array.from(s)];
+    }, [guests]);
 
-  const passFilter = (g) =>
-    (!filterDept || g.department === filterDept) &&
-    (!filterPos || g.position === filterPos);
+    const posOptions = useMemo(() => {
+      const s = new Set();
+      guests.forEach((g) => g.position && s.add(g.position));
+      return ["", ...Array.from(s)];
+    }, [guests]);
 
-  // 计算椅子位置（考虑尺寸比例）
-  const calculateChairPositions = (table) => {
-    const chairs = [];
-    const { type, seats, width = 120, height = 120, rotation = 0 } = table;
-    
-    const scaleFactor = Math.min(width, height) / 120;
-    const radRotation = rotation * (Math.PI / 180);
-    
-    if (type === "circle") {
-      const r = (width / 2) + 25 * scaleFactor;
-      for (let i = 0; i < seats; i++) {
-        const a = (2 * Math.PI * i) / seats;
-        const chairX = (width / 2) + r * Math.cos(a);
-        const chairY = (height / 2) + r * Math.sin(a);
-        
-        // 应用旋转
-        const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
-        const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
-        
-        chairs.push({
-          id: `${table.id}-chair-${i}`,
-          left: `${rotatedX - 12}px`,
-          top: `${rotatedY - 12}px`,
-          guestId: "",
-          guestInitial: ""
-        });
-      }
-    } else if (type === "square") {
-      const per = Math.ceil(seats / 4);
-      let k = 0;
-      for (let s = 0; s < 4; s++) {
-        for (let i = 0; i < per && k < seats; i++, k++) {
-          let chairX, chairY;
-          if (s === 0) {
-            chairX = (width / (per + 1)) * (i + 1);
-            chairY = -30;
-          } else if (s === 1) {
-            chairX = width + 6;
-            chairY = (height / (per + 1)) * (i + 1);
-          } else if (s === 2) {
-            chairX = (width / (per + 1)) * (i + 1);
-            chairY = height + 6;
-          } else {
-            chairX = -30;
-            chairY = (height / (per + 1)) * (i + 1);
-          }
-          
-          // 应用旋转
-          const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
-          const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
-          
-          chairs.push({
-            id: `${table.id}-chair-${k}`,
-            left: `${rotatedX - 12}px`,
-            top: `${rotatedY - 12}px`,
-            guestId: "",
-            guestInitial: ""
-          });
-        }
-      }
-    } else if (type === "row") {
-      // 新增：行式座位排列
-      for (let i = 0; i < seats; i++) {
-        // 等间距分布在桌子宽度上
-        const chairX = (width / (seats + 1)) * (i + 1);
-        // top 固定为 -30（在桌子顶部上方）
-        const chairY = -30;
-        
-        // 应用旋转
-        const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
-        const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
-        
-        chairs.push({
-          id: `${table.id}-chair-${i}`,
-          left: `${rotatedX - 12}px`,
-          top: `${rotatedY - 12}px`,
-          guestId: "",
-          guestInitial: ""
-        });
-      }
-    } else {
-      const half = Math.ceil(seats / 2);
-      for (let i = 0; i < half; i++) {
-        const chairX = (width / (half + 1)) * (i + 1);
-        const chairY = -30;
-        
-        const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
-        const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
-        
-        chairs.push({
-          id: `${table.id}-chair-top-${i}`,
-          left: `${rotatedX - 12}px`,
-          top: `${rotatedY - 12}px`,
-          guestId: "",
-          guestInitial: ""
-        });
-      }
-      for (let i = 0; i < seats - half; i++) {
-        const chairX = (width / (half + 1)) * (i + 1);
-        const chairY = height + 6;
-        
-        const rotatedX = chairX * Math.cos(radRotation) - chairY * Math.sin(radRotation);
-        const rotatedY = chairX * Math.sin(radRotation) + chairY * Math.cos(radRotation);
-        
-        chairs.push({
-          id: `${table.id}-chair-bottom-${i}`,
-          left: `${rotatedX - 12}px`,
-          top: `${rotatedY - 12}px`,
-          guestId: "",
-          guestInitial: ""
-        });
-      }
-    }
-    
-    return chairs;
-  };
+    const passFilter = (g) =>
+      (!filterDept || g.department === filterDept) &&
+      (!filterPos || g.position === filterPos);
 
   // 应用房间布局
   const applyRoomLayout = (layout) => {
     setSelectedRoomLayout(layout);
     setRoomDimensions({
-      width: customWidth,
-      height: customHeight
+      width: 1600,
+      height: 900
     });
   };
 
@@ -809,7 +1083,6 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
     if (e.target.closest('.conf-table') || e.target.closest('.conf-component')) return;
     
     setIsDraggingCanvas(true);
-    // 记录鼠标点击时的位置和当前的画布位置
     setStartPos({
       x: e.clientX,
       y: e.clientY,
@@ -823,11 +1096,9 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
     if (!isDraggingCanvas) return;
 
     const handleMouseMove = (e) => {
-      // 计算鼠标移动的偏移量
       const deltaX = e.clientX - startPos.x;
       const deltaY = e.clientY - startPos.y;
       
-      // 更新画布位置，保持鼠标抓住的点在画布上的相对位置不变
       const newX = startPos.canvasX + deltaX;
       const newY = startPos.canvasY + deltaY;
       
@@ -847,47 +1118,52 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
     };
   }, [isDraggingCanvas, startPos]);
 
-  // 侧边栏宽度调整
-  const handleSidebarResize = (e) => {
-    const newWidth = e.clientX;
-    setSidebarWidth(Math.max(200, Math.min(500, newWidth)));
-  };
-
-  // ---------- tables ----------
-  function addTable() {
+  // 新增：添加多个桌子（修复独立性问题）
+  const addMultipleTables = () => {
     if (!selectedRoomLayout) {
       alert("Please select and apply a room layout first!");
       return;
     }
 
-    setTables((prev) => {
-      const id = uid();
-      const type = tableType;
-      const seats = Number(tableSeats) || 6;
-      const isRow = type === "row";
-      const countSameType = prev.filter((t) => (t.type === "row") === isRow).length + 1;
-      const label = (isRow ? "R" : "T") + countSameType;
+    const quantity = Math.max(1, Math.min(50, tableQuantity));
+    
+    setTables(prev => {
+      const newTables = [];
+      const existingCount = prev.length;
       
-      // 对于 row 类型，使用固定的较小高度
-      const tableHeightForRow = isRow ? 60 : tableHeight;
+      for (let i = 0; i < quantity; i++) {
+        const id = uid();
+        const type = selectedTableType.type;
+        const seats = Number(tableSeats) || 6;
+        const isRow = type === "row";
+        const countSameType = prev.filter((t) => (t.type === "row") === isRow).length + newTables.length + 1;
+        const label = (isRow ? "R" : "T") + countSameType;
+        
+        const tableHeightForRow = isRow ? 60 : tableHeight;
+        
+        // 自动排列桌子位置，避免重叠
+        const tablesInRow = 4;
+        const x = 100 + ((existingCount + newTables.length) % tablesInRow) * 250;
+        const y = 100 + Math.floor((existingCount + newTables.length) / tablesInRow) * 250;
+        
+        newTables.push({
+          id,
+          type,
+          label,
+          seats,
+          width: tableWidth,
+          height: tableHeightForRow,
+          x,
+          y,
+          rotation: 0,
+          chairs: calculateChairPositions({ id, type, seats, width: tableWidth, height: tableHeightForRow })
+        });
+      }
       
-      const newTable = {
-        id,
-        type,
-        label,
-        seats,
-        width: tableWidth,
-        height: tableHeightForRow,
-        x: 100,
-        y: 100,
-        rotation: 0,
-        chairs: calculateChairPositions({ id, type, seats, width: tableWidth, height: tableHeightForRow })
-      };
-      
-      return [...prev, newTable];
+      return [...prev, ...newTables];
     });
     setSelectedElement(null);
-  }
+  };
 
   function assignGuestToChair(guestId, chairId, tableId) {
     const guest = guests.find(g => g.id === guestId);
@@ -1008,6 +1284,167 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
     setPendingNotes([]);
   }
 
+  // ---------- CSV Import ----------
+  const handleCSVImport = (importedGuests) => {
+    setGuests(prev => [...prev, ...importedGuests]);
+  };
+
+  // ---------- Property Updates ----------
+  const handleElementUpdate = (elementType, elementId, updates) => {
+    if (elementType === 'table') {
+      setTables(prev => prev.map(table => 
+        table.id === elementId ? { ...table, ...updates } : table
+      ));
+    } else if (elementType === 'component') {
+      setComponents(prev => prev.map(comp => 
+        comp.id === elementId ? { ...comp, ...updates } : comp
+      ));
+    }
+  };
+
+
+  // ---------- Auto Arrange Tables ----------
+  const handleAutoArrangeTables = (tableCount) => {
+  setTables([]);
+
+  const newTables = [];
+  const margin = 100;
+
+  const baseWidth = tableWidth || 160;
+  const baseHeight = (selectedTableType.type === "row") ? 60 : (tableHeight || 160);
+
+  // 每张桌子的安全占位大小（桌子 + 椅子 + 间隙）
+  const safetyWidth = baseWidth + 80;
+  const safetyHeight = baseHeight + 120;
+
+  // 房间左上角位置（偏移量）
+  const roomX = selectedRoomLayout?.x || 0;
+  const roomY = selectedRoomLayout?.y || 0;
+
+  // ================= 圆形房间 =================
+  if (selectedRoomLayout?.type === "circle") {
+    const centerX = roomX + roomDimensions.width / 2;
+    const centerY = roomY + roomDimensions.height / 2;
+
+    const radiusStep = Math.max(safetyWidth, safetyHeight);
+    const maxRadius = Math.min(roomDimensions.width, roomDimensions.height) / 2
+      - margin
+      - Math.max(baseWidth, baseHeight) / 2;
+
+    let placed = 0;
+    let ring = 0;
+
+    while (placed < tableCount && ring * radiusStep < maxRadius) {
+      const radius = (ring + 1) * radiusStep;
+      const circumference = 2 * Math.PI * radius;
+
+      const maxTablesOnRing = Math.floor(circumference / safetyWidth);
+      const actualTables = Math.min(tableCount - placed, maxTablesOnRing);
+
+      const angleStep = (2 * Math.PI) / actualTables;
+
+      for (let i = 0; i < actualTables; i++) {
+        const angle = i * angleStep;
+        const x = centerX + radius * Math.cos(angle) - baseWidth / 2;
+        const y = centerY + radius * Math.sin(angle) - baseHeight / 2;
+
+        // ✅ 边界检查
+        if (
+          x - 40 < roomX + margin ||
+          y - 60 < roomY + margin ||
+          x + baseWidth + 40 > roomX + roomDimensions.width - margin ||
+          y + baseHeight + 60 > roomY + roomDimensions.height - margin
+        ) {
+          continue;
+        }
+
+        const id = uid();
+        const type = selectedTableType.type;
+        const seats = Number(tableSeats) || 6;
+        const label = (type === "row" ? "R" : "T") + (placed + 1);
+
+        newTables.push({
+          id,
+          type,
+          label,
+          seats,
+          width: baseWidth,
+          height: baseHeight,
+          x,
+          y,
+          rotation: 0,
+          chairs: calculateChairPositions({
+            id,
+            type,
+            seats,
+            width: baseWidth,
+            height: baseHeight,
+          }),
+        });
+
+        placed++;
+        if (placed >= tableCount) break;
+      }
+
+      ring++;
+    }
+  }
+
+  // ================= 矩形房间 =================
+  else {
+    const tablesPerRow = Math.max(
+      1,
+      Math.floor((roomDimensions.width - 2 * margin) / safetyWidth)
+    );
+
+    for (let i = 0; i < tableCount; i++) {
+      const row = Math.floor(i / tablesPerRow);
+      const col = i % tablesPerRow;
+
+      const x = roomX + margin + col * safetyWidth;
+      const y = roomY + margin + row * safetyHeight;
+
+      // ✅ 边界检查
+      if (
+        x - 40 < roomX + margin ||
+        y - 60 < roomY + margin ||
+        x + baseWidth + 40 > roomX + roomDimensions.width - margin ||
+        y + baseHeight + 60 > roomY + roomDimensions.height - margin
+      ) {
+        continue;
+      }
+
+      const id = uid();
+      const type = selectedTableType.type;
+      const seats = Number(tableSeats) || 6;
+      const label = (type === "row" ? "R" : "T") + (i + 1);
+
+      newTables.push({
+        id,
+        type,
+        label,
+        seats,
+        width: baseWidth,
+        height: baseHeight,
+        x,
+        y,
+        rotation: 0,
+        chairs: calculateChairPositions({
+          id,
+          type,
+          seats,
+          width: baseWidth,
+          height: baseHeight,
+        }),
+      });
+    }
+  }
+
+  setTables(newTables);
+};
+
+
+
   // ---------- filters ----------
   function clearFilters() {
     setFilterDept("");
@@ -1053,7 +1490,6 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
       .filter(t => t.chairs.length > 0)
       .sort((a, b) => b.chairs.length - a.chairs.length);
 
-    // 创建椅子映射以便快速访问
     const chairMap = {};
     usableTables.forEach(table => {
       chairMap[table.id] = table.chairs.map(chair => ({
@@ -1062,7 +1498,6 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
       }));
     });
 
-    // 分配逻辑
     const updatedTables = [...usableTables];
     const updatedGuests = [...guests];
 
@@ -1078,7 +1513,6 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
           const emptyChairIndex = chairMap[table.id].findIndex(chair => !chair.guestId);
 
           if (emptyChairIndex !== -1) {
-            // 更新桌子
             const tableIdx = updatedTables.findIndex(t => t.id === table.id);
             if (tableIdx !== -1) {
               const chairIdx = updatedTables[tableIdx].chairs.findIndex(
@@ -1092,7 +1526,6 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
                   guestInitial: guest.name[0]
                 };
                 
-                // 更新参会者
                 const guestIdx = updatedGuests.findIndex(g => g.id === guest.id);
                 if (guestIdx !== -1) {
                   updatedGuests[guestIdx] = {
@@ -1101,7 +1534,6 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
                   };
                 }
                 
-                // 更新椅子映射
                 chairMap[table.id][emptyChairIndex].guestId = guest.id;
                 placed = true;
                 break;
@@ -1148,20 +1580,11 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
 
   // 更新桌子类型时重置尺寸
   useEffect(() => {
-    if (tableType === "circle") {
-      setTableWidth(120);
-      setTableHeight(120);
-    } else if (tableType === "square") {
-      setTableWidth(120);
-      setTableHeight(120);
-    } else if (tableType === "row") {
-      setTableWidth(180);
-      setTableHeight(60); // 行式座位使用较小高度
-    } else {
-      setTableWidth(180);
-      setTableHeight(80);
+    if (selectedTableType) {
+      setTableWidth(selectedTableType.defaultWidth);
+      setTableHeight(selectedTableType.defaultHeight);
     }
-  }, [tableType]);
+  }, [selectedTableType]);
 
   // 更新组件选择时重置尺寸
   useEffect(() => {
@@ -1170,6 +1593,8 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
       setCompHeight(selectedComponent.defaultHeight);
     }
   }, [selectedComponent]);
+
+  const tableCount = tables.length;
 
   return (
     <div className="conf-app">
@@ -1183,327 +1608,363 @@ export default function HostConferenceDesigner({ meetingId, onBack }) {
         <div className="conf-actions">
           <button className="conf-btn" onClick={resetLayout}>Reset Layout</button>
           <button className="conf-btn" onClick={smartArrange}>Smart Arrange</button>
+          <button 
+            className="conf-btn" 
+            onClick={() => setIsCapacityModalOpen(true)}
+            title="Estimate room capacity"
+          >
+            Capacity: {tableCount} tables
+          </button>
           <button className="conf-btn" onClick={exportCSV}>Export CSV</button>
           <button className="conf-btn" onClick={exportPDF}>Export PDF</button>
         </div>
       </div>
 
       <div className="conf-body">
-        {/* 左侧 */}
-        <aside 
-          className="conf-sidebar"
-          style={{ width: isSidebarCollapsed ? '60px' : `${sidebarWidth}px` }}
-        >
-          {!isSidebarCollapsed && (
-            <>
-              {/* 房间布局选择 */}
-              <div className="conf-panel">
-                <h3>Room Layout</h3>
-                <div className="conf-room-layouts">
-                  {ROOM_LAYOUTS.map(layout => (
-                    <RoomLayoutPreview
-                      key={layout.id}
-                      layout={layout}
-                      isSelected={selectedRoomLayout?.id === layout.id}
-                      onSelect={() => setSelectedRoomLayout(layout)}
-                    />
-                  ))}
-                </div>
+        {/* Left Sidebar */}
+        <aside className="conf-sidebar">
+          <div className="conf-scale-info">
+            Canvas scale: 1cm = 100cm in reality
+          </div>
+          
+          <button 
+            className="conf-btn block" 
+            onClick={() => setIsImportModalOpen(true)}
+          >
+            CSV Import
+          </button>
 
-                {/* 自定义尺寸 */}
-                <div className="conf-custom-dimensions">
-                  <h4>Room Dimensions</h4>
-                  <div className="conf-dimension-row">
-                    <label>Width (cm):</label>
-                    <input
-                      type="number"
-                      value={customWidth}
-                      onChange={(e) => setCustomWidth(Number(e.target.value))}
-                      min="400"
-                      max="2000"
-                      className="conf-input-sm"
-                    />
-                  </div>
-                  <div className="conf-dimension-row">
-                    <label>Height (cm):</label>
-                    <input
-                      type="number"
-                      value={customHeight}
-                      onChange={(e) => setCustomHeight(Number(e.target.value))}
-                      min="400"
-                      max="2000"
-                      className="conf-input-sm"
-                    />
-                  </div>
-                  <button 
-                    className="conf-btn" 
-                    onClick={() => applyRoomLayout(selectedRoomLayout)}
-                    disabled={!selectedRoomLayout}
-                  >
-                    Apply Layout
-                  </button>
-                </div>
-              </div>
-
-              {/* 会议组件 */}
-              <div className="conf-panel">
-                <h3>Conference Components</h3>
-                <div className="conf-components-grid">
-                  {CONFERENCE_COMPONENTS.map(comp => (
-                    <ComponentPreview
-                      key={comp.id}
-                      component={comp}
-                      onAdd={addConferenceComponent}
-                    />
-                  ))}
-                </div>
-
-                <div className="conf-component-controls">
-                  <div className="conf-row">
-                    <div>Component:&nbsp;</div>
-                    <select 
-                      value={selectedComponent?.id} 
-                      onChange={(e) => setSelectedComponent(CONFERENCE_COMPONENTS.find(c => c.id === e.target.value))}
-                    >
-                      {CONFERENCE_COMPONENTS.map(comp => (
-                        <option key={comp.id} value={comp.id}>{comp.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="conf-row mt-8">
-                    <div>Width (cm):&nbsp;</div>
-                    <input
-                      type="number"
-                      value={compWidth}
-                      onChange={(e) => setCompWidth(Number(e.target.value))}
-                      min="20"
-                      max="500"
-                      className="conf-input-sm"
-                    />
-                  </div>
-
-                  <div className="conf-row mt-8">
-                    <div>Height (cm):&nbsp;</div>
-                    <input
-                      type="number"
-                      value={compHeight}
-                      onChange={(e) => setCompHeight(Number(e.target.value))}
-                      min="20"
-                      max="500"
-                      className="conf-input-sm"
-                    />
-                  </div>
-
-                  <div className="conf-row mt-8">
-                    <button 
-                      className="conf-btn" 
-                      onClick={() => addConferenceComponent(selectedComponent)}
-                    >
-                      Add {selectedComponent?.name}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="conf-panel">
-                <h3>Tables</h3>
-                <div className="conf-row">
-                  <div>Type:&nbsp;</div>
-                  <select value={tableType} onChange={(e) => setTableType(e.target.value)}>
-                    <option value="circle">Circular</option>
-                    <option value="square">Square</option>
-                    <option value="row">Row of Seats</option>
-                  </select>
-                </div>
-
-                <div className="conf-row mt-8">
-                  <div>Seats:&nbsp;</div>
-                  <select value={tableSeats} onChange={(e) => setTableSeats(Number(e.target.value))}>
-                    {[4, 6, 8, 10, 12].map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="conf-row mt-8">
-                  <div>Width (cm):&nbsp;</div>
-                    <input
-                      type="number"
-                      value={tableWidth}
-                      onChange={(e) => setTableWidth(Number(e.target.value))}
-                      min="60"
-                      max="300"
-                      className="conf-input-sm"
-                    />
-                  </div>
-
-                  <div className="conf-row mt-8">
-                    <div>Height (cm):&nbsp;</div>
-                    <input
-                      type="number"
-                      value={tableHeight}
-                      onChange={(e) => setTableHeight(Number(e.target.value))}
-                      min="60"
-                      max="300"
-                      className="conf-input-sm"
-                    />
-                  </div>
-
-                  <div className="conf-row mt-8">
-                    <button className="conf-btn" onClick={addTable}>Add Table »</button>
-                  </div>
-                </div>
-
-                <div className="conf-panel">
-                  <h3>Attendees</h3>
-                  <input ref={nameRef} placeholder="Name" className="conf-input" />
-                  <input ref={deptRef} placeholder="Department" className="conf-input" />
-                  <input ref={posRef} placeholder="Position" className="conf-input" />
-
-                  <div className="conf-notes">
-                    <div className="conf-row">
-                      <input
-                        value={noteInput}
-                        onChange={(e) => setNoteInput(e.target.value)}
-                        placeholder="Note / Tag"
-                        className="conf-input"
-                      />
-                      <button className="conf-btn" onClick={addNote} aria-label="Add note">＋</button>
-                    </div>
-                    <div className="conf-pending-notes">
-                      {pendingNotes.map((n, i) => (
-                        <span className="conf-chip" key={n + i}>
-                          {n}
-                          <span className="x" onClick={() => removePendingNote(i)} aria-label="remove">×</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button className="conf-btn block" onClick={addGuest}>Add Attendee</button>
-
-                  {/* Guests 列表（可拖拽） */}
-                  <div className="conf-guest-list mt-8">
-                    {guests.map(guest => (
-                      <GuestBadge
-                        key={guest.id}
-                        guest={guest}
-                        onRemove={removeGuest}
-                        passFilter={passFilter}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Filters */}
-                  <div className="conf-filters">
-                    <h4 style={{ marginBottom: 8 }}>Filters</h4>
-                    <div className="conf-filter-row">
-                      <div className="conf-filter-label">Department:</div>
-                      <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)}>
-                        {deptOptions.map((opt) => (
-                          <option key={opt || "ALL"} value={opt}>
-                            {opt || "All Departments"}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="conf-filter-row">
-                      <div className="conf-filter-label">Position:</div>
-                      <select value={filterPos} onChange={(e) => setFilterPos(e.target.value)}>
-                        {posOptions.map((opt) => (
-                          <option key={opt || "ALL"} value={opt}>
-                            {opt || "All Positions"}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="conf-filter-buttons">
-                      <button className="conf-btn" onClick={clearFilters}>Clear Filters</button>
-                    </div>
-                  </div>
-
-                  <button className="conf-btn mt-12" onClick={onBack}>
-                    Back to menu
-                  </button>
-                </div>
-              </>
-            )}
-            <div 
-              className="conf-sidebar-resizer"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                document.addEventListener('mousemove', handleSidebarResize);
-                document.addEventListener('mouseup', () => {
-                  document.removeEventListener('mousemove', handleSidebarResize);
-                });
-              }}
-            />
-            <button 
-              className="conf-sidebar-toggle"
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            >
-              {isSidebarCollapsed ? '›' : '‹'}
-            </button>
-          </aside>
-
-          {/* 右侧画布 */}
-          <section className="conf-canvas">
-            <CanvasControls 
-              scale={canvasScale}
-              onZoomIn={zoomIn}
-              onZoomOut={zoomOut}
-              onResetView={resetView}
-            />
-            <div 
-              className="conf-scroll"
-              ref={canvasContainerRef}
-              onMouseDown={handleCanvasMouseDown}
-              style={{ cursor: isDraggingCanvas ? 'grabbing' : 'grab' }}
-            >
-              {selectedRoomLayout && roomDimensions.width > 0 && (
-                <div 
-                  id="conf-board" 
-                  ref={boardRef}
-                  style={{
-                    width: roomDimensions.width,
-                    height: roomDimensions.height,
-                    transform: `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${canvasScale})`,
-                    transformOrigin: '0 0'
-                  }}
-                >
-                  <RoomBackground 
-                    layout={selectedRoomLayout} 
-                    roomDimensions={roomDimensions}
-                    scale={canvasScale} 
-                  />
-                  {tables.map(table => (
-                    <Table
-                      key={table.id}
-                      table={table}
-                      onMove={moveTable}
-                      onChairDrop={assignGuestToChair}
-                      onChairClick={removeGuestFromChair}
-                      onDelete={deleteComponent}
-                      isSelected={selectedElement === table.id}
-                      onSelect={selectElement}
-                    />
-                  ))}
-                  {components.map(component => (
-                    <ConferenceComponent
-                      key={component.id}
-                      component={component}
-                      onMove={moveComponent}
-                      onDelete={deleteComponent}
-                      isSelected={selectedElement === component.id}
-                      onSelect={selectElement}
-                    />
-                  ))}
-                </div>
-              )}
+          {/* Room Layout */}
+          <div className="conf-panel">
+            <h3>Room Layout</h3>
+            <div className="conf-room-layouts">
+              {ROOM_LAYOUTS.map(layout => (
+                <RoomLayoutPreview
+                  key={layout.id}
+                  layout={layout}
+                  isSelected={selectedRoomLayout?.id === layout.id}
+                  onSelect={() => setSelectedRoomLayout(layout)}
+                />
+              ))}
             </div>
-          </section>
-        </div>
+
+            <div className="conf-custom-dimensions">
+              <h4>Room Dimensions (cm)</h4>
+              <div className="conf-dimension-row">
+                <label>Width:</label>
+                <input
+                  type="number"
+                  value={roomDimensions.width}
+                  onChange={(e) => setRoomDimensions(prev => ({...prev, width: Number(e.target.value)}))}
+                  min="400"
+                  max="5000"
+                  className="conf-input-sm"
+                />
+              </div>
+              <div className="conf-dimension-row">
+                <label>Height:</label>
+                <input
+                  type="number"
+                  value={roomDimensions.height}
+                  onChange={(e) => setRoomDimensions(prev => ({...prev, height: Number(e.target.value)}))}
+                  min="400"
+                  max="5000"
+                  className="conf-input-sm"
+                />
+              </div>
+              <button 
+                className="conf-btn" 
+                onClick={() => applyRoomLayout(selectedRoomLayout)}
+                disabled={!selectedRoomLayout}
+              >
+                Apply Layout
+              </button>
+            </div>
+          </div>
+
+          {/* Conference Components */}
+          <div className="conf-panel">
+            <h3>Conference Components</h3>
+            <div className="conf-components-grid">
+              {CONFERENCE_COMPONENTS.map(comp => (
+                <ComponentPreview
+                  key={comp.id}
+                  component={comp}
+                  onAdd={addConferenceComponent}
+                />
+              ))}
+            </div>
+
+            <div className="conf-component-controls">
+              <div className="conf-row">
+                <div>Component:&nbsp;</div>
+                <select 
+                  value={selectedComponent?.id} 
+                  onChange={(e) => setSelectedComponent(CONFERENCE_COMPONENTS.find(c => c.id === e.target.value))}
+                >
+                  {CONFERENCE_COMPONENTS.map(comp => (
+                    <option key={comp.id} value={comp.id}>{comp.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="conf-row mt-8">
+                <div>Width (cm):&nbsp;</div>
+                <input
+                  type="number"
+                  value={compWidth}
+                  onChange={(e) => setCompWidth(Number(e.target.value))}
+                  min="20"
+                  max="500"
+                  className="conf-input-sm"
+                />
+              </div>
+
+              <div className="conf-row mt-8">
+                <div>Height (cm):&nbsp;</div>
+                <input
+                  type="number"
+                  value={compHeight}
+                  onChange={(e) => setCompHeight(Number(e.target.value))}
+                  min="20"
+                  max="500"
+                  className="conf-input-sm"
+                />
+              </div>
+
+              <div className="conf-row mt-8">
+                <button 
+                  className="conf-btn" 
+                  onClick={() => addConferenceComponent(selectedComponent)}
+                >
+                  Add {selectedComponent?.name}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tables */}
+          <div className="conf-panel">
+            <h3>Tables</h3>
+            <div className="conf-table-types">
+              {TABLE_TYPES.map(tableType => (
+                <TableTypePreview
+                  key={tableType.id}
+                  tableType={tableType}
+                  onSelect={setSelectedTableType}
+                  isSelected={selectedTableType?.id === tableType.id}
+                />
+              ))}
+            </div>
+
+            <div className="conf-row mt-8">
+              <div>Seats:&nbsp;</div>
+              <select value={tableSeats} onChange={(e) => setTableSeats(Number(e.target.value))}>
+                {[4, 6, 8, 10, 12].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="conf-row mt-8">
+              <div>Quantity:&nbsp;</div>
+              <input
+                type="number"
+                value={tableQuantity}
+                onChange={(e) => setTableQuantity(Number(e.target.value))}
+                min="1"
+                max="50"
+                className="conf-input-sm"
+              />
+            </div>
+
+            <div className="conf-row mt-8">
+              <div>Width (cm):&nbsp;</div>
+                <input
+                  type="number"
+                  value={tableWidth}
+                  onChange={(e) => setTableWidth(Number(e.target.value))}
+                  min="60"
+                  max="300"
+                  className="conf-input-sm"
+                />
+              </div>
+
+              <div className="conf-row mt-8">
+                <div>Height (cm):&nbsp;</div>
+                <input
+                  type="number"
+                  value={tableHeight}
+                  onChange={(e) => setTableHeight(Number(e.target.value))}
+                  min="60"
+                  max="300"
+                  className="conf-input-sm"
+                />
+              </div>
+
+              <div className="conf-row mt-8">
+                <button className="conf-btn primary" onClick={addMultipleTables}>
+                  Add {tableQuantity} Table{tableQuantity > 1 ? 's' : ''}
+                </button>
+              </div>
+            </div>
+
+            {/* Attendees */}
+            <div className="conf-panel">
+              <h3>Attendees</h3>
+              <input ref={nameRef} placeholder="Name" className="conf-input" />
+              <input ref={deptRef} placeholder="Department" className="conf-input" />
+              <input ref={posRef} placeholder="Position" className="conf-input" />
+
+              <div className="conf-notes">
+                <div className="conf-row">
+                  <input
+                    value={noteInput}
+                    onChange={(e) => setNoteInput(e.target.value)}
+                    placeholder="Note / Tag"
+                    className="conf-input"
+                  />
+                  <button className="conf-btn" onClick={addNote} aria-label="Add note">＋</button>
+                </div>
+                <div className="conf-pending-notes">
+                  {pendingNotes.map((n, i) => (
+                    <span className="conf-chip" key={n + i}>
+                      {n}
+                      <span className="x" onClick={() => removePendingNote(i)} aria-label="remove">×</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <button className="conf-btn block" onClick={addGuest}>Add Attendee</button>
+
+              {/* Guests 列表（可拖拽） */}
+              <div className="conf-guest-list mt-8">
+                {guests.map(guest => (
+                  <GuestBadge
+                    key={guest.id}
+                    guest={guest}
+                    onRemove={removeGuest}
+                    passFilter={passFilter}
+                  />
+                ))}
+              </div>
+
+              {/* Filters */}
+              <div className="conf-filters">
+                <h4 style={{ marginBottom: 8 }}>Filters</h4>
+                <div className="conf-filter-row">
+                  <div className="conf-filter-label">Department:</div>
+                  <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)}>
+                    {deptOptions.map((opt) => (
+                      <option key={opt || "ALL"} value={opt}>
+                        {opt || "All Departments"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="conf-filter-row">
+                  <div className="conf-filter-label">Position:</div>
+                  <select value={filterPos} onChange={(e) => setFilterPos(e.target.value)}>
+                    {posOptions.map((opt) => (
+                      <option key={opt || "ALL"} value={opt}>
+                        {opt || "All Positions"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="conf-filter-buttons">
+                  <button className="conf-btn" onClick={clearFilters}>Clear Filters</button>
+                </div>
+              </div>
+
+              <button className="conf-btn mt-12" onClick={onBack}>
+                Back to menu
+              </button>
+            </div>
+        </aside>
+
+        {/* Main Canvas */}
+        <section className="conf-canvas">
+          <CanvasControls 
+            scale={canvasScale}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onResetView={resetView}
+          />
+          <div 
+            className="conf-scroll"
+            ref={canvasContainerRef}
+            onMouseDown={handleCanvasMouseDown}
+            style={{ cursor: isDraggingCanvas ? 'grabbing' : 'grab' }}
+          >
+            {selectedRoomLayout && roomDimensions.width > 0 && (
+              <div 
+                id="conf-board" 
+                ref={boardRef}
+                style={{
+                  width: '1600px',
+                  height: '900px',
+                  transform: `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${canvasScale})`,
+                  transformOrigin: '0 0'
+                }}
+              >
+                <RoomBackground 
+                  layout={selectedRoomLayout} 
+                  roomDimensions={roomDimensions}
+                  scale={canvasScale} 
+                />
+                {tables.map(table => (
+                  <Table
+                    key={table.id}
+                    table={table}
+                    onMove={moveTable}
+                    onChairDrop={assignGuestToChair}
+                    onChairClick={removeGuestFromChair}
+                    onDelete={deleteComponent}
+                    isSelected={selectedElement === table.id}
+                    onSelect={selectElement}
+                  />
+                ))}
+                {components.map(component => (
+                  <ConferenceComponent
+                    key={component.id}
+                    component={component}
+                    onMove={moveComponent}
+                    onDelete={deleteComponent}
+                    isSelected={selectedElement === component.id}
+                    onSelect={selectElement}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Right Properties Panel */}
+        <aside className="conf-properties-sidebar">
+          <PropertiesPanel
+            selectedElement={selectedElement}
+            tables={tables}
+            components={components}
+            onUpdate={handleElementUpdate}
+          />
+        </aside>
       </div>
-    );
-  }
+
+      {/* Modals */}
+      <CSVImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={handleCSVImport}
+      />
+      
+      <CapacityEstimationModal
+        isOpen={isCapacityModalOpen}
+        onClose={() => setIsCapacityModalOpen(false)}
+        roomDimensions={roomDimensions}
+        onAutoArrange={handleAutoArrangeTables}
+      />
+    </div>
+  );
+}
